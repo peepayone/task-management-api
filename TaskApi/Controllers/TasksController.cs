@@ -2,7 +2,6 @@
 using TaskApi.Data;
 using TaskApi.DTOs;
 using TaskApi.Models;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace TaskApi.Controllers
 {
@@ -48,13 +47,24 @@ namespace TaskApi.Controllers
             var task = _context.Tasks.Find(id);
             if(task == null) return NotFound();
 
-            return Ok(task);
+            var result = new TaskDto
+            {
+                Id = task.Id,
+                Title = task.Title,
+                Description = task.Description,
+                Status = task.Status,
+                CreatedAt = task.CreatedAt
+            };
+
+            return Ok(result);
         }
 
         //新增
         [HttpPost]
         public IActionResult Create(CreateTaskDto taskDto)
         {
+            if(!ModelState.IsValid) return BadRequest(ModelState);
+
             var task = new TaskItem
             {
                 Title = taskDto.Title,
@@ -65,7 +75,16 @@ namespace TaskApi.Controllers
             _context.Tasks.Add(task);
             _context.SaveChanges();
 
-            return Ok(task);
+            var result = new TaskDto
+            {
+                Id = task.Id,
+                Title = task.Title,
+                Description = task.Description,
+                Status = task.Status,
+                CreatedAt = task.CreatedAt
+            };
+
+            return Ok(result);
         }
 
         //刪除
@@ -85,6 +104,8 @@ namespace TaskApi.Controllers
         [HttpPut("{id}")]
         public IActionResult Update(int id, UpdateTaskDto taskDto)
         {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
             var task = _context.Tasks.Find(id);
             if (task == null) return NotFound();
 
