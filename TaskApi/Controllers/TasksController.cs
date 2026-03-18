@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using TaskApi.Data;
 using TaskApi.DTOs;
 using TaskApi.Models;
+using TaskApi.Services.Interfaces;
 
 namespace TaskApi.Controllers
 {
@@ -9,33 +11,19 @@ namespace TaskApi.Controllers
     [Route("api/[controller]")]
     public class TasksController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly ITaskService _taskService;
+        //private readonly AppDbContext _context;
 
-        public TasksController(AppDbContext context)
+        public TasksController(ITaskService taskService)
         {
-            _context = context;
+            _taskService = taskService;
         }
 
         //查詢全部 可帶參數query string
         [HttpGet]
         public IActionResult GetAll([FromQuery] string? status)
         {
-            var query = _context.Tasks.AsQueryable();
-            //如果有參數 帶出附帶條件的查詢
-            if(!string.IsNullOrWhiteSpace(status)) query = query.Where(t => t.Status == status);
-
-            //依照創立時間帶出全部查詢
-            var result = query
-                .OrderByDescending(t => t.CreatedAt)
-                .Select(t => new TaskDto
-                {
-                    Id = t.Id,
-                    Title = t.Title,
-                    Description = t.Description,
-                    Status = t.Status,
-                    CreatedAt = t.CreatedAt
-                })
-                .ToList();
+            var result = _taskService.GetAll(status);
 
             return Ok(result);
         }
@@ -44,19 +32,9 @@ namespace TaskApi.Controllers
         [HttpGet("{id}")]
         public IActionResult Get(int id)
         {
-            var task = _context.Tasks.Find(id);
-            if(task == null) return NotFound();
+            var result = _taskService.GetById(id);
 
-            var result = new TaskDto
-            {
-                Id = task.Id,
-                Title = task.Title,
-                Description = task.Description,
-                Status = task.Status,
-                CreatedAt = task.CreatedAt
-            };
-
-            return Ok(result);
+            return result == null ? NotFound() : Ok(result);
         }
 
         //新增
@@ -65,39 +43,9 @@ namespace TaskApi.Controllers
         {
             if(!ModelState.IsValid) return BadRequest(ModelState);
 
-            var task = new TaskItem
-            {
-                Title = taskDto.Title,
-                Description = taskDto.Description,
-                Status = taskDto.Status,
-                CreatedAt = DateTime.Now
-            };
-            _context.Tasks.Add(task);
-            _context.SaveChanges();
-
-            var result = new TaskDto
-            {
-                Id = task.Id,
-                Title = task.Title,
-                Description = task.Description,
-                Status = task.Status,
-                CreatedAt = task.CreatedAt
-            };
+            var result = _taskService.Create(taskDto);
 
             return Ok(result);
-        }
-
-        //刪除
-        [HttpDelete("{id}")]
-        public IActionResult Delete(int id)
-        {
-            var task = _context.Tasks.Find(id);
-            if (task == null) return NotFound();
-
-            _context.Tasks.Remove(task);
-            _context.SaveChanges();
-
-            return NoContent();
         }
 
         //修改
@@ -106,16 +54,18 @@ namespace TaskApi.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            var task = _context.Tasks.Find(id);
-            if (task == null) return NotFound();
+            var updated = _taskService.Update(id, taskDto);
 
-            task.Title = taskDto.Title;
-            task.Description = taskDto.Description;
-            task.Status = taskDto.Status;
+            return updated? NoContent() : NotFound();
+        }
 
-            _context.SaveChanges();
+        //刪除
+        [HttpDelete("{id}")]
+        public IActionResult Delete(int id)
+        {
+            var deleted = _taskService.Delete(id);
 
-            return NoContent();
+            return deleted ? NoContent() : NotFound();
         }
     }
 }
