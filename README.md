@@ -5,6 +5,12 @@ This project demonstrates basic backend development practices including CRUD ope
 
 ---
 
+## Setup
+
+Set connection string using User Secrets:
+
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "your_connection_string"
+
 ## 🚀 Features
 
 - Create, Read, Update, Delete (CRUD) tasks
